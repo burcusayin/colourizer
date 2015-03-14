@@ -1,10 +1,10 @@
 package com.example.burcu1.colordetectortrial.main;
 
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.content.Intent;
@@ -13,21 +13,27 @@ import android.widget.Toast;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.widget.TextView;
+import android.speech.tts.TextToSpeech;
 
 import com.example.burcu1.colordetectortrial.function.*;
 import com.example.burcu1.colordetectortrial.utility.*;
 import com.example.burcu1.colordetectortrial.db.*;
 import com.example.burcu1.colordetectortrial.R;
 
-public class MainActivity extends ActionBarActivity {
+import java.util.Locale;
 
+
+public class MainActivity extends ActionBarActivity implements TextToSpeech.OnInitListener{
+
+    //Image capturing & color detecting variables
     static final int REQUEST_IMAGE_CAPTURE = 1;
-
     private ImageView imageView;
     private Uri imageUri;
     private Bitmap imageBitmap;
     private String densityColor;
     private String luminanceColor;
+    private TextToSpeech tts;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,6 +88,9 @@ public class MainActivity extends ActionBarActivity {
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
+        createTTS();
+        for(int i = 0; i < 3000; i++){};
+        Log.w("activityReult","gelen request code: "+requestCode);
         if (requestCode == REQUEST_IMAGE_CAPTURE) {
             if(resultCode == RESULT_OK){
                 //picture was taken.
@@ -96,6 +105,7 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    //image capturing and color detecting functions
     private void displayCapturedImage(String uri) {
 
         try {
@@ -179,12 +189,101 @@ public class MainActivity extends ActionBarActivity {
             Toast.makeText(this, "Detected color is:\n" + gotColor.colorName, Toast.LENGTH_LONG).show();
             TextView textView = (TextView) findViewById(R.id.colorName);
             textView.setText(gotColor.colorName);
+            vocalize(gotColor.colorName);
         }
         else
         {
             Toast.makeText(this, "Color could not found!\n", Toast.LENGTH_LONG).show();
         }
 
+    }
+
+    //TTS functions
+/*
+    private void checkTTS(){
+        Log.w("CheckTTS", "check'de");
+
+        tts = new TextToSpeech(this, this);
+        Log.w("activityReultTTS","yeni speaker yaratıldı");
+        if(tts.isLanguageAvailable(Locale.ENGLISH)==TextToSpeech.LANG_COUNTRY_AVAILABLE)
+        {
+            Log.w("chechTTS","language available");
+        }
+        else
+        {
+            Intent install = new Intent();
+            install.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+            startActivity(install);
+        }
+    }
+*/
+    @Override
+    public void onInit(int status)
+    {
+        Log.w("TTS", "onInit'de");
+        if (status == TextToSpeech.SUCCESS) {
+            if (tts.isLanguageAvailable(Locale.US) == TextToSpeech.LANG_AVAILABLE)
+                tts.setLanguage(Locale.UK);
+        }
+        else
+        {
+            Intent install = new Intent();
+            install.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+            startActivity(install);
+        }
+
+        if(status == TextToSpeech.SUCCESS){
+            int result = tts.isLanguageAvailable(Locale.US);
+            if (result == TextToSpeech.LANG_MISSING_DATA
+                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TTS", "TTS is missing or not supported");
+            }
+            else
+            {
+                Log.w("onInit","language was set");
+            }
+        }
+        else
+        {
+            Log.w("onInit","TextToSpeech status does not successful");
+        }
+
+    }
+
+    private void createTTS()
+    {
+        if (tts == null) {
+            // currently can't change Locale until speech ends
+            try {
+                // Initialize text-to-speech. This is an asynchronous operation.
+                // The OnInitListener (second argument) is called after
+                // initialization completes.
+                tts = new TextToSpeech(this, this);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void vocalize(String text)
+    {
+        Log.w("vocalize'a gelen:", text);
+        tts.speak(text,TextToSpeech.QUEUE_ADD,null);
+        tts.playSilence(1200,TextToSpeech.QUEUE_ADD, null);
+
+    }
+
+    @Override
+    public void onDestroy()
+    {
+        // Don't forget to shutdown!
+        if (tts != null)
+        {
+            tts.stop();
+            tts.shutdown();
+        }
+        super.onDestroy();
     }
 
 }
