@@ -90,7 +90,7 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
 
         createTTS();
         for(int i = 0; i < 3000; i++){};
-        Log.w("activityReult","gelen request code: "+requestCode);
+        Log.w("activityResult","gelen request code: "+requestCode);
         if (requestCode == REQUEST_IMAGE_CAPTURE) {
             if(resultCode == RESULT_OK){
                 //picture was taken.
@@ -199,24 +199,7 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
     }
 
     //TTS functions
-/*
-    private void checkTTS(){
-        Log.w("CheckTTS", "check'de");
 
-        tts = new TextToSpeech(this, this);
-        Log.w("activityReultTTS","yeni speaker yaratıldı");
-        if(tts.isLanguageAvailable(Locale.ENGLISH)==TextToSpeech.LANG_COUNTRY_AVAILABLE)
-        {
-            Log.w("chechTTS","language available");
-        }
-        else
-        {
-            Intent install = new Intent();
-            install.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
-            startActivity(install);
-        }
-    }
-*/
     @Override
     public void onInit(int status)
     {

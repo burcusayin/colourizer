@@ -77,7 +77,6 @@ public class DBHelper extends SQLiteOpenHelper{
 
         for(i=0; i<nameLen1; i++)
         {
-            db = this.getWritableDatabase();
             ContentValues values = new ContentValues();
             values.put(ColorProperties.KEY_name, colorNames1[i]);
             values.put(ColorProperties.KEY_code, colorCodes1[i]);
@@ -88,7 +87,6 @@ public class DBHelper extends SQLiteOpenHelper{
 
         for(i=0; i<nameLen2; i++)
         {
-            db = this.getWritableDatabase();
             ContentValues values = new ContentValues();
             values.put(ColorProperties.KEY_name, colorNames2[i]);
             values.put(ColorProperties.KEY_code, colorCodes2[i]);
@@ -99,7 +97,6 @@ public class DBHelper extends SQLiteOpenHelper{
 
         for(i=0; i<nameLen3; i++)
         {
-            db = this.getWritableDatabase();
             ContentValues values = new ContentValues();
             values.put(ColorProperties.KEY_name, colorNames3[i]);
             values.put(ColorProperties.KEY_code, colorCodes3[i]);
