@@ -9,13 +9,9 @@ import java.util.Map;
 
 import com.example.burcu1.colordetectortrial.utility.*;
 
-/**
- * Created by Burcu1 on 25.2.2015.
- */
 public class PixelDensity {
-
     private static final String TAG = PixelDensity.class.getSimpleName();
-    private static final int ACCEPT_DIFFERENTIAL_THRESHOLD = 40;
+    private static final int ACCEPT_DIFFERENTIAL_THRESHOLD = 0;
     private static final int REJECT_DIFFERENTIAL_THRESHOLD = 100;
 
     private CallbackInterface callback;

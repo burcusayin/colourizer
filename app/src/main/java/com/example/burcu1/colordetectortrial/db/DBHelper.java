@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import static java.lang.Math.pow;
@@ -40,6 +41,8 @@ public class DBHelper extends SQLiteOpenHelper{
                 + ColorProperties.KEY_code + " STRING )";
 
         db.execSQL(CREATE_TABLE_COLORS);
+        String path = db.getPath();
+        Log.w("DB!!!1",path);
 
         populateDB(db);
 

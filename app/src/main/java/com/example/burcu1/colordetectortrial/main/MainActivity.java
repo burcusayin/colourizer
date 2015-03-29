@@ -1,16 +1,19 @@
 package com.example.burcu1.colordetectortrial.main;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.content.Intent;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.widget.TextView;
 import android.speech.tts.TextToSpeech;
@@ -20,6 +23,11 @@ import com.example.burcu1.colordetectortrial.utility.*;
 import com.example.burcu1.colordetectortrial.db.*;
 import com.example.burcu1.colordetectortrial.R;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.*;
 import java.util.Locale;
 
 
@@ -27,12 +35,20 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
 
     //Image capturing & color detecting variables
     static final int REQUEST_IMAGE_CAPTURE = 1;
+
     private ImageView imageView;
     private Uri imageUri;
     private Bitmap imageBitmap;
     private String densityColor;
     private String luminanceColor;
+
+    //TextToSpeech variables
     private TextToSpeech tts;
+    private boolean isFinished;
+    private boolean speakOk;
+
+    //SpeechToText variables
+    static final int REQUEST_VOICE_RECOGNITION = 2;
 
 
     @Override
@@ -40,7 +56,24 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         imageView = (ImageView) findViewById(R.id.imageView);
-        callCaptureImage();
+        isFinished = true;
+        createTTS();
+        /*
+        do{}while(isFinished);
+        vocalize("Welcome to Colourizer");
+        vocalize("You can say take picture to hear which color your dress has");
+        vocalize("Please touch to screen before giving your voice command and wait until you hear a beep");
+        */
+        startVoiceRecognition();
+
+        /*
+        try {
+            writeToSD();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        };
+        */
     }
 
     @Override
@@ -67,18 +100,23 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
 
     private void callCaptureImage()
     {
+        /*
         Intent takePicture = new Intent(this, CaptureImage.class);
+        startActivityForResult(takePicture, REQUEST_IMAGE_CAPTURE);
+        */
+
+        Intent takePicture = new Intent(this,TakePicture.class);
+        takePicture.putExtra("FLASH", "off");
         startActivityForResult(takePicture, REQUEST_IMAGE_CAPTURE);
     }
 
-    private void callColorFinder()
+    private void callColorFinder(String path)
     {
-        String path = getPath(imageUri);
-        imageBitmap = ImageUtility.loadStandardBitmapFromPath(path);
-        if (imageBitmap != null) {
-            getPixelDensity(imageBitmap);
+        Bitmap bitmap = ImageUtility.loadStandardBitmapFromPath(path);
+        if (bitmap != null) {
+            getPixelDensity(bitmap);
 
-            getPixelLuminance(imageBitmap);
+            getPixelLuminance(bitmap);
         }
         else
         {
@@ -92,25 +130,48 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
         for(int i = 0; i < 3000; i++){};
         Log.w("activityResult","gelen request code: "+requestCode);
         if (requestCode == REQUEST_IMAGE_CAPTURE) {
+            imageView = (ImageView) findViewById(R.id.imageView);
+            String path = null;
             if(resultCode == RESULT_OK){
                 //picture was taken.
                 String uri = data.getStringExtra("fileUri");
-                displayCapturedImage(uri);
+                path = FileUtility.getRealPathFromURI(this,Uri.parse(uri));
+                displayCapturedImage(path);
+                callColorFinder(path);
             }
             if (resultCode == RESULT_CANCELED) {
                 //picture could not be taken.
                 callCaptureImage();
             }
-            callColorFinder();
+        }
+        else if(requestCode == REQUEST_VOICE_RECOGNITION)
+        {
+            imageView = (ImageView) findViewById(R.id.imageView);
+            setContentView(R.layout.activity_main);
+            if(resultCode == RESULT_OK){
+                //picture was taken.
+                String voiceInput = data.getStringExtra("voiceInput");
+                evaluateVoiceInput(voiceInput);
+            }
+            if (resultCode == RESULT_CANCELED) {
+                //picture could not be taken.
+                Log.w("voice","Something went wrong!");
+                startVoiceRecognition();
+            }
         }
     }
 
     //image capturing and color detecting functions
-    private void displayCapturedImage(String uri) {
+    private void displayCapturedImage(String path) {
 
         try {
-            imageUri = Uri.parse(uri);
-            imageView.setImageURI(imageUri);
+            Log.w("displayde","try a girdi");
+            Log.w("displayde","image file: " + path);
+
+            Bitmap myImg = BitmapFactory.decodeFile(path);
+            imageView.setImageBitmap(myImg);
+            imageView.invalidate();
+
         }
         catch (NullPointerException e) {
 
@@ -119,28 +180,6 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
             Toast.makeText(this, "There is a problem in image displaying!\n", Toast.LENGTH_LONG).show();
         }
 
-    }
-
-    /**
-     * helper to retrieve the path of an image URI
-     */
-    public String getPath(Uri uri) {
-        // just some safety built in
-        if( uri == null ) {
-
-            return null;
-        }
-        // try to retrieve the image from the media store first
-        // this will only work for images selected from gallery
-        String[] projection = { android.provider.MediaStore.Images.Media.DATA };
-        Cursor cursor = managedQuery(uri, projection, null, null, null);
-        if( cursor != null ){
-            int column_index = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media.DATA);
-            cursor.moveToFirst();
-            return cursor.getString(column_index);
-        }
-        // this is our fallback here
-        return uri.getPath();
     }
 
     private void getPixelDensity(Bitmap bitmap) {
@@ -162,7 +201,6 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
     }
 
     private void setLuminance(String hexColor) {
-        luminanceColor = hexColor;
         int color = Color.parseColor(hexColor);
         findViewById(R.id.luminance).setBackgroundColor(color);
         ((TextView)findViewById(R.id.luminanceText)).setTextColor(ColorUtility.getOptimizedTextColor(color, 0f));
@@ -224,6 +262,7 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
             else
             {
                 Log.w("onInit","language was set");
+                isFinished = false;
             }
         }
         else
@@ -252,9 +291,10 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
     private void vocalize(String text)
     {
         Log.w("vocalize'a gelen:", text);
+        do{  }while(isFinished);
         tts.speak(text,TextToSpeech.QUEUE_ADD,null);
         tts.playSilence(1200,TextToSpeech.QUEUE_ADD, null);
-
+        speakOk = true;
     }
 
     @Override
@@ -267,6 +307,31 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
             tts.shutdown();
         }
         super.onDestroy();
+    }
+
+    // voice recognition functions
+
+    private void startVoiceRecognition()
+    {
+        Intent startVoice = new Intent(this, VoiceRecognitionActivity.class);
+        startActivityForResult(startVoice, REQUEST_VOICE_RECOGNITION);
+    }
+
+    private void evaluateVoiceInput(String input)
+    {
+        Toast.makeText(this, "Detected voice is:" + input, Toast.LENGTH_LONG).show();
+
+        if(input.toLowerCase().contains("picture".toLowerCase()))
+        {
+            callCaptureImage();
+        }
+        else
+        {
+            speakOk = false;
+            vocalize("Please, try again!");
+            do{}while(!speakOk);
+            startVoiceRecognition();
+        }
     }
 
 }
